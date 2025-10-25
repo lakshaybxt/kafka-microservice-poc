@@ -3,7 +3,7 @@ package com.food.food_service.kafka.consumer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.food.food_service.kafka.events.OrderEvent;
-import com.food.food_service.kafka.events.OrderItemCompletedEvent;
+import com.food.food_service.kafka.events.OrderItemPreparedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -12,8 +12,6 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.food.food_service.kafka.topics.KafkaTopics.ORDER_PREPARED;
 import static com.food.food_service.kafka.topics.KafkaTopics.ORDER_PROCESSED;
@@ -24,7 +22,7 @@ import static com.food.food_service.kafka.topics.KafkaTopics.ORDER_PROCESSED;
 public class ListenerService {
 
     private final ObjectMapper objectMapper;
-    private final KafkaTemplate<String, OrderItemCompletedEvent> kafkaTemplate;
+    private final KafkaTemplate<String, OrderItemPreparedEvent> kafkaTemplate;
 
     @KafkaListener(topics = ORDER_PROCESSED, groupId = "${spring.kafka.consumer.group-id}")
     public void onOrderProcessed(String message, Acknowledgment ack) {
@@ -40,7 +38,7 @@ public class ListenerService {
                     ack.acknowledge(); // Ack after 1 minute
                     log.info("Order has bee prepared for orderId: {}, userId: {}", orderId, userId);
 
-                    OrderItemCompletedEvent orderItemCompletedEvent = OrderItemCompletedEvent.builder()
+                    OrderItemPreparedEvent orderItemPreparedEvent = OrderItemPreparedEvent.builder()
                             .orderId(orderId)
                             .userId(userId)
                             .itemType(orderEvent.getFood().getType())
@@ -48,7 +46,7 @@ public class ListenerService {
                             .address(orderEvent.getAddress())
                             .completedTime(LocalDateTime.now())
                             .build();
-                    kafkaTemplate.send(ORDER_PREPARED, orderItemCompletedEvent);
+                    kafkaTemplate.send(ORDER_PREPARED, orderItemPreparedEvent);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     log.error("Ack delay interrupted", e);

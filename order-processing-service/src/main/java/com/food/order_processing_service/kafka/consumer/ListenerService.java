@@ -1,5 +1,6 @@
 package com.food.order_processing_service.kafka.consumer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.food.order_processing_service.domain.entity.OrderStatus;
 import com.food.order_processing_service.kafka.events.OrderEvent;
@@ -27,8 +28,8 @@ public class ListenerService {
     private final Map<String, OrderStatus> orderStatusMap =  new ConcurrentHashMap<>();
 
     @KafkaListener(topics = ORDER_CREATED, groupId = "${spring.kafka.consumer.group-id}")
-    public void onOrderCreated(String message, Acknowledgment ack) {
-        OrderEvent orderEvent = objectMapper.convertValue(message, OrderEvent.class);
+    public void onOrderCreated(String message, Acknowledgment ack) throws JsonProcessingException {
+        OrderEvent orderEvent = objectMapper.readValue(message, OrderEvent.class);
         String orderId = orderEvent.getOrderId();
 
         OrderStatus status = orderStatusMap.computeIfAbsent(orderId, id -> new OrderStatus());
@@ -41,8 +42,8 @@ public class ListenerService {
     }
 
     @KafkaListener(topics = PAYMENT_COMPLETED, groupId = "${spring.kafka.consumer.group-id}")
-    public void onPaymentCompleted(String message, Acknowledgment ack) {
-        PaymentEvent paymentEvent = objectMapper.convertValue(message, PaymentEvent.class);
+    public void onPaymentCompleted(String message, Acknowledgment ack) throws JsonProcessingException {
+        PaymentEvent paymentEvent = objectMapper.readValue(message, PaymentEvent.class);
         String orderId = paymentEvent.getOrderId();
 
         OrderStatus status = orderStatusMap.computeIfAbsent(orderId, id -> new OrderStatus());
@@ -60,6 +61,8 @@ public class ListenerService {
             log.info("Processing order {}", orderId);
             kafkaTemplate.send(ORDER_PROCESSED, status.getOrderEvent());
             orderStatusMap.remove(orderId);
+        } else {
+            log.info("Order {} not ready yet", orderId);
         }
     }
 }

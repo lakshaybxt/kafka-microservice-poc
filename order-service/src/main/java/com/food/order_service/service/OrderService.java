@@ -22,6 +22,7 @@ public class OrderService {
     public OrderEvent createOrder(OrderDto orderDto){
 
         long totalAmount = orderDto.getFood().getQuantity() * orderDto.getFood().getPrice();
+//        String key = orderDto.getFood().getName();
 
         OrderEvent orderEvent = OrderEvent.builder()
                 .orderId(orderDto.getOrderId())

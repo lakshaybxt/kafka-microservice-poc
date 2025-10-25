@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class FoodDto {
     private String type;
     private String name;
+    private String[] toppings;
     private int quantity;
     private long price;
 }

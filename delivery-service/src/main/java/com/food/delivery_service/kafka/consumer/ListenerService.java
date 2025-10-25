@@ -1,5 +1,6 @@
 package com.food.delivery_service.kafka.consumer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.food.delivery_service.domain.entity.OrderStatus;
 import com.food.delivery_service.kafka.events.OrderItemPreparedEvent;
@@ -28,8 +29,8 @@ public class ListenerService {
     private final Map<String, OrderStatus> orderStatusMap =  new ConcurrentHashMap<>();
 
     @KafkaListener(topics = ORDER_PREPARED, groupId = "${spring.kafka.consumer.group-id}")
-    public void onOrderPrepared(String message, Acknowledgment ack) {
-        OrderItemPreparedEvent orderItemEvent = objectMapper.convertValue(message, OrderItemPreparedEvent.class);
+    public void onOrderPrepared(String message, Acknowledgment ack) throws JsonProcessingException {
+        OrderItemPreparedEvent orderItemEvent = objectMapper.readValue(message, OrderItemPreparedEvent.class);
         String orderId = orderItemEvent.getOrderId();
 
         OrderStatus status = orderStatusMap.computeIfAbsent(orderId, id -> new OrderStatus());
@@ -42,8 +43,8 @@ public class ListenerService {
     }
 
     @KafkaListener(topics = PAYMENT_COMPLETED, groupId = "${spring.kafka.consumer.group-id}")
-    public void onPaymentCompleted(String message, Acknowledgment ack) {
-        PaymentEvent paymentEvent = objectMapper.convertValue(message, PaymentEvent.class);
+    public void onPaymentCompleted(String message, Acknowledgment ack) throws JsonProcessingException {
+        PaymentEvent paymentEvent = objectMapper.readValue(message, PaymentEvent.class);
         String orderId = paymentEvent.getOrderId();
 
         OrderStatus status = orderStatusMap.computeIfAbsent(orderId, id -> new OrderStatus());
@@ -70,10 +71,27 @@ public class ListenerService {
                     .build();
 
             kafkaTemplate.send(ORDER_READY_FOR_DELIVER, orderReadyEvent);
-
-            orderStatusMap.remove(orderId);
-        } else {
-            log.info("Order {} not ready yet", orderId);
         }
+    }
+
+    public String deliverOrder(String orderId) {
+        OrderStatus status = orderStatusMap.get(orderId);
+
+        if(!status.isPaymentDone() || status.getOrderItemEvent() == null) {
+            return "Order not ready for delivery yet";
+        }
+
+        OrderReadyForDeliveryEvent orderReadyEvent = OrderReadyForDeliveryEvent.builder()
+                .orderId(orderId)
+                .userId(status.getOrderItemEvent().getUserId())
+                .address(status.getOrderItemEvent().getAddress())
+                .item(status.getOrderItemEvent().getItemType())
+                .readyTime(status.getOrderItemEvent().getCompletedTime())
+                .message("Order is delivered!")
+                .build();
+
+        kafkaTemplate.send(ORDER_DELIVERED, orderReadyEvent);
+        orderStatusMap.remove(orderId);
+        return "Order delivered for orderId " + orderId;
     }
 }

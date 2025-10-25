@@ -1,6 +1,6 @@
 package com.food.food_service.config;
 
-import com.food.food_service.kafka.events.OrderItemCompletedEvent;
+import com.food.food_service.kafka.events.OrderItemPreparedEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +23,7 @@ public class KafkaProducerConfig {
     private String bootstrapServers;
 
     @Bean
-    public ProducerFactory<String, OrderItemCompletedEvent> producerFactory() {
+    public ProducerFactory<String, OrderItemPreparedEvent> producerFactory() {
         Map<String, Object> props = new HashMap<>();
 
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -40,7 +40,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, OrderItemCompletedEvent> kafkaTemplate() {
+    public KafkaTemplate<String, OrderItemPreparedEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }

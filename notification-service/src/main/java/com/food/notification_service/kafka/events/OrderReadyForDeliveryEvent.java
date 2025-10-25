@@ -1,4 +1,4 @@
-package com.food.delivery_service.kafka.events;
+package com.food.notification_service.kafka.events;
 
 import lombok.Builder;
 import lombok.Data;
